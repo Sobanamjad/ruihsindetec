@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import NewsDetail from './NewsDetail';
 import { fetchNews, type NewsItem } from './rssService';
+import { getPublicContent } from './publicContent';
+import type { ContentData } from './publicContent';
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,6 +13,22 @@ function App() {
   const [newsError, setNewsError] = useState('');
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('全部分類');
   const [visibleNewsCount, setVisibleNewsCount] = useState(12);
+  const [content, setContent] = useState<ContentData>(getPublicContent());
+
+  // Listen for localStorage changes to update content
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setContent(getPublicContent());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('local-storage-updated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('local-storage-updated', handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -57,9 +75,10 @@ function App() {
       ? news.length
       : news.filter((item) => item.category === category).length;
 
-  useEffect(() => {
-    setVisibleNewsCount(12);
-  }, [selectedNewsCategory]);
+  const handleCategoryChange = (category: string) => {
+    setSelectedNewsCategory(category);
+    setVisibleNewsCount(12); // Reset pagination when category changes
+  };
 
   const pathname = decodeURIComponent(window.location.pathname);
 
@@ -73,18 +92,18 @@ function App() {
       {/* ===== HEADER ===== */}
       <header className={`header ${isScrolled ? 'header-scrolled' : ''}`}>
         <div className="container header-container">
-          <a href="#home" className="logo">瑞信徵信社</a>
+          <a href="#home" className="logo">{content.site.site_name}</a>
           
           <nav className="nav-desktop">
-            <a href="#home">首頁</a>
-            <a href="#about">關於瑞信</a>
-            <a href="#services">服務項目</a>
-            <a href="#process">服務流程</a>
-            <a href="#news">即時新聞</a>
-            <a href="#knowledge">徵信知識</a>
-            <a href="#faq">常見問題</a>
-            <a href="#contact">聯絡諮詢</a>
-            <a href="#contact" className="btn-primary">立即諮詢</a>
+            {content.menu.items.map((item, index) => (
+              <a
+                key={index}
+                href={item.href}
+                className={item.variant === 'primary' ? 'btn-primary' : ''}
+              >
+                {item.label}
+              </a>
+            ))}
           </nav>
 
           <button className="menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -95,15 +114,16 @@ function App() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <nav className="nav-mobile">
-            <a href="#home" onClick={() => setIsMenuOpen(false)}>首頁</a>
-            <a href="#about" onClick={() => setIsMenuOpen(false)}>關於瑞信</a>
-            <a href="#services" onClick={() => setIsMenuOpen(false)}>服務項目</a>
-            <a href="#process" onClick={() => setIsMenuOpen(false)}>服務流程</a>
-            <a href="#news" onClick={() => setIsMenuOpen(false)}>即時新聞</a>
-            <a href="#knowledge" onClick={() => setIsMenuOpen(false)}>徵信知識</a>
-            <a href="#faq" onClick={() => setIsMenuOpen(false)}>常見問題</a>
-            <a href="#contact" onClick={() => setIsMenuOpen(false)}>聯絡諮詢</a>
-            <a href="#contact" className="btn-primary" onClick={() => setIsMenuOpen(false)}>立即諮詢</a>
+            {content.menu.items.map((item, index) => (
+              <a
+                key={index}
+                href={item.href}
+                className={item.variant === 'primary' ? 'btn-primary' : ''}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {item.label}
+              </a>
+            ))}
           </nav>
         )}
       </header>
@@ -520,7 +540,7 @@ function App() {
                       className={`rss-category-button ${
                         selectedNewsCategory === category ? 'active' : ''
                       }`}
-                      onClick={() => setSelectedNewsCategory(category)}
+                      onClick={() => handleCategoryChange(category)}
                     >
                       {category}
                       <span className="rss-category-count">
@@ -602,26 +622,22 @@ function App() {
       <footer className="footer">
         <div className="container footer-container">
           <div className="footer-brand">
-            <p className="footer-logo">瑞信徵信社</p>
+            <p className="footer-logo">{content.footer.logo}</p>
             <p className="footer-desc">
-              提供婚姻徵信、商業調查與企業風險管理相關服務，協助個人與企業釐清資訊、降低風險。
+              {content.footer.description}
             </p>
           </div>
           <nav className="footer-nav">
-            <a href="#about">關於瑞信</a>
-            <a href="#services">服務項目</a>
-            <a href="#process">服務流程</a>
-            <a href="#news">即時新聞</a>
-            <a href="#knowledge">徵信知識</a>
-            <a href="#faq">常見問題</a>
-            <a href="#contact">聯絡諮詢</a>
+            {content.footer.nav_items.map((item, index) => (
+              <a key={index} href={item.href}>{item.label}</a>
+            ))}
           </nav>
         </div>
         <div className="footer-bottom">
           <p className="footer-disclaimer">
-            本網站內容為一般資訊與服務介紹，不構成法律意見。實際案件應依個別情況進行評估，必要時應諮詢專業律師。
+            {content.footer.disclaimer}
           </p>
-          <p className="footer-copy">© 2026 瑞信徵信社 All Rights Reserved.</p>
+          <p className="footer-copy">{content.footer.copyright}</p>
         </div>
       </footer>
     </div>

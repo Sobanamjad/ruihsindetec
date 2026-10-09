@@ -18,6 +18,21 @@ function normalizeUrl(url: string): string {
     return '';
   }
 
+  // Fix malformed URLs with double https://
+  if (url.includes('https://https://')) {
+    url = url.replace(/https:\/\/https:\/\//g, 'https://');
+  }
+
+  // Fix malformed URLs with http://https://
+  if (url.includes('http://https://')) {
+    url = url.replace(/http:\/\/https:\/\//g, 'https://');
+  }
+
+  // Fix URLs with sharpnews.twhttps://
+  if (url.includes('sharpnews.twhttps://')) {
+    url = url.replace('sharpnews.twhttps://', 'https://');
+  }
+
   if (url.startsWith('//')) {
     return 'https:' + url;
   }
@@ -36,7 +51,7 @@ function makeSlug(link: string, title: string): string {
     if (pathParts.length > 0) {
       return decodeURIComponent(pathParts[pathParts.length - 1]);
     }
-  } catch (e) {
+  } catch (_e) {
     // URL parse failed, use title
   }
 
@@ -46,9 +61,15 @@ function makeSlug(link: string, title: string): string {
 function extractFirstImage(html: string): string {
   if (!html) return '';
 
+  // Try to match img tag with src or data-src
   const imgMatch = html.match(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/i);
   if (imgMatch) {
-    return normalizeUrl(imgMatch[1]);
+    const url = normalizeUrl(imgMatch[1]);
+    console.log('Extracted image URL:', url);
+    // Only return if the URL looks valid
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      return url;
+    }
   }
 
   return '';
@@ -164,15 +185,36 @@ function parseRSSItem(item: Element, includeContent: boolean = false): NewsItem 
     }
   }
 
-  // Extract image
+  // Also try to get content from all content elements (RSS 2.0 uses multiple)
+  if (!content) {
+    const allContent = item.querySelectorAll('content');
+    allContent.forEach((c) => {
+      if (c.textContent && !content) {
+        content = c.textContent;
+      }
+    });
+  }
+
+  console.log('Title:', title);
+  console.log('Content length:', content.length);
+
+  // Extract image from content first
   let image = extractFirstImage(content);
+
+  // Try image from description if content doesn't have one
+  if (!image) {
+    image = extractFirstImage(description);
+  }
 
   // Try enclosure
   if (!image) {
     const enclosure = item.querySelector('enclosure');
     const enclosureUrl = enclosure?.getAttribute('url');
     if (enclosureUrl) {
-      image = normalizeUrl(enclosureUrl);
+      const normalized = normalizeUrl(enclosureUrl);
+      if (normalized && (normalized.startsWith('http://') || normalized.startsWith('https://'))) {
+        image = normalized;
+      }
     }
   }
 
@@ -181,8 +223,19 @@ function parseRSSItem(item: Element, includeContent: boolean = false): NewsItem 
     const mediaContent = item.querySelector('[url]');
     const mediaUrl = mediaContent?.getAttribute('url');
     if (mediaUrl) {
-      image = normalizeUrl(mediaUrl);
+      const normalized = normalizeUrl(mediaUrl);
+      if (normalized && (normalized.startsWith('http://') || normalized.startsWith('https://'))) {
+        image = normalized;
+      }
     }
+  }
+
+  // Debug: log if no image found
+  if (!image && title) {
+    console.log(`No image found for: ${title}`);
+    console.log('Content preview:', content.substring(0, 300));
+  } else if (image) {
+    console.log(`Image found for: ${title}`, image);
   }
 
   // Get category
