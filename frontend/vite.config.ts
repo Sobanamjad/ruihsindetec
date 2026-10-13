@@ -9,7 +9,8 @@ function adminRoutePlugin(): Plugin {
     name: 'admin-route-plugin',
     configureServer(server: ViteDevServer) {
       server.middlewares.use((req: any, _res: any, next: any) => {
-        if (req.url === '/admin' || req.url?.startsWith('/admin/')) {
+        // Only redirect the base /admin path, let React Router handle sub-routes
+        if (req.url === '/admin') {
           req.url = '/admin.html';
         }
         next();
@@ -17,7 +18,8 @@ function adminRoutePlugin(): Plugin {
     },
     configurePreviewServer(server: PreviewServer) {
       server.middlewares.use((req: any, _res: any, next: any) => {
-        if (req.url === '/admin' || req.url?.startsWith('/admin/')) {
+        // Only redirect the base /admin path, let React Router handle sub-routes
+        if (req.url === '/admin') {
           req.url = '/admin.html';
         }
         next();

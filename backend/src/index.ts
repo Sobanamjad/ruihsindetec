@@ -5,6 +5,7 @@ import exampleRouter from './routes/example.js';
 import contentRouter from './routes/content.js';
 import authRouter from './routes/auth.js';
 import newsRouter from './routes/news.js';
+import pagesRouter from './routes/pages.js';
 import { fetchAndStoreNews } from './services/newsService.js';
 import cron from 'node-cron';
 
@@ -30,6 +31,7 @@ app.use('/api/example', exampleRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/content', contentRouter);
 app.use('/api/news', newsRouter);
+app.use('/api/pages', pagesRouter);
 
 // Schedule news refresh every hour
 cron.schedule('0 * * * *', async () => {

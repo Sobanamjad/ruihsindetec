@@ -5,6 +5,16 @@ import { fetchNews, type NewsItem } from './rssService';
 import { getPublicContent } from './publicContent';
 import type { ContentData } from './publicContent';
 
+interface PageData {
+  id: number;
+  slug: string;
+  title: string;
+  type: string;
+  content: any;
+  meta_title?: string;
+  meta_description?: string;
+}
+
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,6 +24,9 @@ function App() {
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('全部分類');
   const [visibleNewsCount, setVisibleNewsCount] = useState(12);
   const [content, setContent] = useState<ContentData | null>(null);
+  const [currentPage, setCurrentPage] = useState<PageData | null>(null);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   // Load content from API on mount
   useEffect(() => {
@@ -35,6 +48,74 @@ function App() {
 
     return () => {
       window.removeEventListener('content-updated', handleContentUpdate);
+    };
+  }, []);
+
+  // Check if current path is a dynamic page
+  useEffect(() => {
+    const pathname = currentPath;
+
+    // Skip news pages and home
+    if (pathname.startsWith('/news/') || pathname === '/' || pathname.startsWith('#')) {
+      setCurrentPage(null);
+      return;
+    }
+
+    // Check if it's a section anchor link
+    if (pathname.startsWith('/#') || pathname === '') {
+      setCurrentPage(null);
+      return;
+    }
+
+    // Try to fetch as a dynamic page
+    const fetchPage = async () => {
+      try {
+        setPageLoading(true);
+        const slug = pathname.replace(/^\//, '');
+        const response = await fetch(`http://localhost:5000/api/pages/${slug}`);
+
+        if (response.ok) {
+          const pageData = await response.json();
+          setCurrentPage(pageData);
+        } else {
+          setCurrentPage(null);
+        }
+      } catch (error) {
+        console.error('Error fetching page:', error);
+        setCurrentPage(null);
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    fetchPage();
+  }, [currentPath]);
+
+  // Listen for navigation changes
+  useEffect(() => {
+    const handleNavigation = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handleNavigation);
+
+    // Also intercept link clicks
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      if (link && link.href && link.origin === window.location.origin) {
+        const pathname = new URL(link.href).pathname;
+        if (pathname !== window.location.pathname) {
+          setCurrentPath(pathname);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleLinkClick);
+
+    return () => {
+      window.removeEventListener('popstate', handleNavigation);
+      document.removeEventListener('click', handleLinkClick);
     };
   }, []);
 
@@ -93,6 +174,87 @@ function App() {
   if (pathname.startsWith('/news/')) {
     const slug = pathname.replace(/^\/news\//, '');
     return <NewsDetail slug={slug} />;
+  }
+
+  // Render dynamic page if found
+  if (currentPage) {
+    return (
+      <div className="app">
+        <header className={`header ${isScrolled ? 'header-scrolled' : ''}`}>
+          <div className="container header-container">
+            <a href="/" className="logo">{content?.site.site_name || '瑞信徵信社'}</a>
+
+            <nav className="nav-desktop">
+              {content?.menu.items.map((item, index) => (
+                <a
+                  key={index}
+                  href={item.href}
+                  className={item.variant === 'primary' ? 'btn-primary' : ''}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            <button className="menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              ☰
+            </button>
+          </div>
+
+          {isMenuOpen && (
+            <nav className="nav-mobile">
+              {content?.menu.items.map((item, index) => (
+                <a
+                  key={index}
+                  href={item.href}
+                  className={item.variant === 'primary' ? 'btn-primary' : ''}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          )}
+        </header>
+
+        <section className="section" style={{ padding: '80px 0' }}>
+          <div className="container">
+            <div className="section-header">
+              <h1 className="section-title">{currentPage.title}</h1>
+            </div>
+            <div className="page-content" style={{ lineHeight: '1.8', fontSize: '16px' }}>
+              {currentPage.content?.content ? (
+                <div dangerouslySetInnerHTML={{ __html: currentPage.content.content }} />
+              ) : (
+                <p style={{ color: '#6b7280' }}>此頁面內容尚未建立，請前往管理後台編輯</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <footer className="footer">
+          <div className="container footer-container">
+            <div className="footer-brand">
+              <p className="footer-logo">{content?.footer.logo || '瑞信徵信社'}</p>
+              <p className="footer-desc">{content?.footer.description || ''}</p>
+            </div>
+            <nav className="footer-nav">
+              {content?.footer.nav_items.map((item, index) => (
+                <a key={index} href={item.href}>{item.label}</a>
+              ))}
+            </nav>
+          </div>
+          <div className="footer-bottom">
+            <p className="footer-disclaimer">{content?.footer.disclaimer || ''}</p>
+            <p className="footer-copy">{content?.footer.copyright || ''}</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  if (pageLoading) {
+    return <div className="app">Loading page...</div>;
   }
 
   if (!content) {

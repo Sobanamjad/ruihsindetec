@@ -10,28 +10,28 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     {
       section: '主控台',
       items: [
-        { label: '儀表板', path: '/admin/dashboard' },
+        { label: '儀表板', path: '/dashboard' },
       ]
     },
     {
       section: '網站內容',
       items: [
-        { label: '首頁橫幅', path: '/admin/hero' },
-        { label: '導覽選單', path: '/admin/menu' },
-        { label: '服務項目', path: '/admin/services' },
-        { label: '關於我們', path: '/admin/about' },
-        { label: '常見問題', path: '/admin/faq' },
-        { label: '徵信知識', path: '/admin/knowledge' },
-        { label: '服務流程', path: '/admin/process' },
-        { label: '頁尾資訊', path: '/admin/footer' },
+        { label: '首頁橫幅', path: '/hero' },
+        { label: '導覽選單', path: '/menu' },
+        { label: '服務項目', path: '/services' },
+        { label: '關於我們', path: '/about' },
+        { label: '常見問題', path: '/faq' },
+        { label: '徵信知識', path: '/knowledge' },
+        { label: '服務流程', path: '/process' },
+        { label: '頁尾資訊', path: '/footer' },
       ]
     },
     {
       section: '媒體與設定',
       items: [
-        { label: '媒體庫', path: '/admin/media' },
-        { label: '網站設定', path: '/admin/settings' },
-        { label: '頁面管理', path: '/admin/pages' },
+        { label: '頁面管理', path: '/pages' },
+        { label: '媒體庫', path: '/media' },
+        { label: '網站設定', path: '/settings' },
       ]
     }
   ];

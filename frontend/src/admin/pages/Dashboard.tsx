@@ -67,10 +67,10 @@ export default function Dashboard() {
       <div className="admin-dashboard-info">
         <h3>快速連結</h3>
         <ul>
-          <li><a href="/admin/hero">編輯首頁橫幅</a></li>
-          <li><a href="/admin/services">編輯服務項目</a></li>
-          <li><a href="/admin/menu">編輯導覽選單</a></li>
-          <li><a href="/admin/settings">網站設定</a></li>
+          <li><a href="/hero">編輯首頁橫幅</a></li>
+          <li><a href="/services">編輯服務項目</a></li>
+          <li><a href="/menu">編輯導覽選單</a></li>
+          <li><a href="/settings">網站設定</a></li>
         </ul>
       </div>
     </div>

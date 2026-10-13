@@ -20,6 +20,25 @@ INSERT INTO users (username, password_hash)
 VALUES ('admin', '$2b$10$rOzJdQZQZQZQZQZQZQZQZuQZQZQZQZQZQZQZQZQZQZQZQZQZQZQZQZQZQZ')
 ON CONFLICT (username) DO NOTHING;
 
+-- Create pages table for dynamic pages
+CREATE TABLE IF NOT EXISTS pages (
+  id SERIAL PRIMARY KEY,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL DEFAULT 'content',
+  content JSONB,
+  meta_title VARCHAR(255),
+  meta_description TEXT,
+  is_published BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for pages
+CREATE INDEX IF NOT EXISTS idx_pages_slug ON pages(slug);
+CREATE INDEX IF NOT EXISTS idx_pages_published ON pages(is_published);
+CREATE INDEX IF NOT EXISTS idx_pages_type ON pages(type);
+
 -- Insert default content
 INSERT INTO site_content (section, content)
 VALUES
