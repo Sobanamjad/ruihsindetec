@@ -23,7 +23,7 @@ function NewsDetail({ slug }: NewsDetailProps) {
 
         const [articleData, newsData] = await Promise.all([
           fetchArticleBySlug(slug),
-          fetchNews(),
+          fetchNews(4),
         ]);
 
         if (!articleData) {

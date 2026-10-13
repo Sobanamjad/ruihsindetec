@@ -52,7 +52,7 @@ function App() {
         setNewsLoading(true);
         setNewsError('');
 
-        const newsData = await fetchNews();
+        const newsData = await fetchNews(30);
         setNews(newsData);
       } catch (error) {
         console.error('News loading error:', error);
