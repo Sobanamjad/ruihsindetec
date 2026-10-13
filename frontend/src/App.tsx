@@ -13,20 +13,28 @@ function App() {
   const [newsError, setNewsError] = useState('');
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('全部分類');
   const [visibleNewsCount, setVisibleNewsCount] = useState(12);
-  const [content, setContent] = useState<ContentData>(getPublicContent());
+  const [content, setContent] = useState<ContentData | null>(null);
 
-  // Listen for localStorage changes to update content
+  // Load content from API on mount
   useEffect(() => {
-    const handleStorageChange = () => {
-      setContent(getPublicContent());
+    const loadContent = async () => {
+      const data = await getPublicContent();
+      setContent(data);
+    };
+    loadContent();
+  }, []);
+
+  // Listen for content updates from admin panel
+  useEffect(() => {
+    const handleContentUpdate = async () => {
+      const data = await getPublicContent();
+      setContent(data);
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('local-storage-updated', handleStorageChange);
+    window.addEventListener('content-updated', handleContentUpdate);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('local-storage-updated', handleStorageChange);
+      window.removeEventListener('content-updated', handleContentUpdate);
     };
   }, []);
 
@@ -85,6 +93,10 @@ function App() {
   if (pathname.startsWith('/news/')) {
     const slug = pathname.replace(/^\/news\//, '');
     return <NewsDetail slug={slug} />;
+  }
+
+  if (!content) {
+    return <div className="app">Loading...</div>;
   }
 
   return (

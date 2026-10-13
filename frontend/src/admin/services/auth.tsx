@@ -1,6 +1,8 @@
 import { type ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 
+const API_BASE = 'http://localhost:5000/api';
+
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -24,10 +26,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Simple hardcoded credentials for demo
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin123';
-
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,20 +39,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const checkAuth = async (): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const authData = localStorage.getItem('admin_auth');
-      if (authData) {
-        const parsed = JSON.parse(authData);
-        if (parsed.expiresAt && new Date(parsed.expiresAt) > new Date()) {
-          setIsAuthenticated(true);
-          setUser(parsed.user);
-          return true;
-        } else {
-          localStorage.removeItem('admin_auth');
-        }
+      const token = localStorage.getItem('admin_token');
+      if (!token) {
+        setIsAuthenticated(false);
+        setUser(null);
+        return false;
       }
-      setIsAuthenticated(false);
-      setUser(null);
-      return false;
+
+      const response = await fetch(`${API_BASE}/auth/verify`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (data.valid) {
+        setIsAuthenticated(true);
+        setUser(data.user);
+        return true;
+      } else {
+        localStorage.removeItem('admin_token');
+        setIsAuthenticated(false);
+        setUser(null);
+        return false;
+      }
     } catch (error) {
       console.error('Auth check failed:', error);
       setIsAuthenticated(false);
@@ -68,25 +76,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (username: string, password: string): Promise<{ success: boolean; message: string }> => {
     setIsLoading(true);
     try {
-      // Simple hardcoded check
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        const userData = {
-          username,
-          loginTime: new Date().toISOString(),
-        };
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-        // Store in localStorage with 24 hour expiry
-        const authData = {
-          user: userData,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        };
+      const data = await response.json();
 
-        localStorage.setItem('admin_auth', JSON.stringify(authData));
+      if (data.success) {
+        localStorage.setItem('admin_token', data.token);
         setIsAuthenticated(true);
-        setUser(userData);
-        return { success: true, message: '登入成功' };
+        setUser(data.user);
+        return { success: true, message: data.message };
       } else {
-        return { success: false, message: '用戶名或密碼錯誤' };
+        return { success: false, message: data.message };
       }
     } catch (error) {
       console.error('Login failed:', error);
@@ -99,7 +105,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      localStorage.removeItem('admin_auth');
+      localStorage.removeItem('admin_token');
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {

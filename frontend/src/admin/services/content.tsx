@@ -4,6 +4,8 @@ import { useAuth } from './auth';
 import type { ContentData } from '../../publicContent';
 import { defaultContent } from '../../publicContent';
 
+const API_BASE = 'http://localhost:5000/api';
+
 interface ContentContextType {
   content: ContentData | null;
   isLoading: boolean;
@@ -44,15 +46,23 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
     setError(null);
 
     try {
-      const storedContent = localStorage.getItem('site_content');
-      if (storedContent) {
-        setContent(JSON.parse(storedContent));
-      } else {
-        setContent(defaultContent);
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(`${API_BASE}/content`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch content');
       }
+
+      const data = await response.json();
+      setContent(data);
     } catch (error) {
       console.error('Failed to load content:', error);
       setError('載入內容失敗');
+      setContent(defaultContent);
     } finally {
       setIsLoading(false);
     }
@@ -65,13 +75,30 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
 
     setIsLoading(true);
     try {
-      const currentContent = content || defaultContent;
-      const updatedContent = { ...currentContent, [section]: data };
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(`${API_BASE}/content/${section}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: data }),
+      });
 
-      localStorage.setItem('site_content', JSON.stringify(updatedContent));
+      if (!response.ok) {
+        throw new Error('Failed to save content');
+      }
+
+      const result = await response.json();
+      
+      // Update local state with the saved content from server
+      const currentContent = content || defaultContent;
+      const updatedContent = { ...currentContent, [section]: result.content || data };
       setContent(updatedContent);
+      
       // Dispatch event to notify main app
-      window.dispatchEvent(new Event('local-storage-updated'));
+      window.dispatchEvent(new Event('content-updated'));
+      
       return { success: true, message: '儲存成功' };
     } catch (error) {
       console.error('Failed to save section:', error);
@@ -88,14 +115,28 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
 
     setIsLoading(true);
     try {
-      const currentContent = content || defaultContent;
-      const defaultSection = defaultContent[section];
-      const updatedContent = { ...currentContent, [section]: defaultSection };
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(`${API_BASE}/content/${section}/reset`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      localStorage.setItem('site_content', JSON.stringify(updatedContent));
+      if (!response.ok) {
+        throw new Error('Failed to reset content');
+      }
+
+      const result = await response.json();
+      
+      // Update local state
+      const currentContent = content || defaultContent;
+      const updatedContent = { ...currentContent, [section]: result.content };
       setContent(updatedContent);
+      
       // Dispatch event to notify main app
-      window.dispatchEvent(new Event('local-storage-updated'));
+      window.dispatchEvent(new Event('content-updated'));
+      
       return { success: true, message: '重置成功' };
     } catch (error) {
       console.error('Failed to reset section:', error);
@@ -107,11 +148,12 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
 
   const fetchPublicContent = async (): Promise<ContentData | null> => {
     try {
-      const storedContent = localStorage.getItem('site_content');
-      if (storedContent) {
-        return JSON.parse(storedContent);
+      const response = await fetch(`${API_BASE}/content`);
+      if (!response.ok) {
+        return defaultContent;
       }
-      return defaultContent;
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Failed to fetch public content:', error);
       return defaultContent;

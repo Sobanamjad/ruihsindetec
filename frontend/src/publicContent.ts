@@ -353,14 +353,17 @@ export const defaultContent: ContentData = {
   },
 };
 
-export function getPublicContent(): ContentData {
+const API_BASE = 'http://localhost:5000/api';
+
+export async function getPublicContent(): Promise<ContentData> {
   try {
-    const stored = localStorage.getItem('site_content');
-    if (stored) {
-      return JSON.parse(stored);
+    const response = await fetch(`${API_BASE}/content`);
+    if (response.ok) {
+      const data = await response.json();
+      return data;
     }
   } catch (error) {
-    console.error('Failed to load content from localStorage:', error);
+    console.error('Failed to load content from API:', error);
   }
   return defaultContent;
 }
